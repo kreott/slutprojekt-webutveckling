@@ -5,8 +5,8 @@ A javascript-based Assembly emulator.
 ## Controls
  
 - ``RUN`` run the full program (instant or with a step delay via the interval slider)
-- ``STEP`` — execute one instruction at a time
-- ``STOP`` — reset everything
+- ``STEP`` execute one instruction at a time
+- ``STOP`` reset everything, log, registers and flags to 0
  
 ## Instructions
  
