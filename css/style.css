@@ -2,7 +2,7 @@
     --bg: #0a0a0f;
     --panel: #0f0f1a;
     --border: #1e1e3a;
-    --accent: #00e5ff;
+    --accent: #00ff9f;
     --accent1: #ff2d55;
     --text: #e8e8f0;
     --muted: #555570;
@@ -31,8 +31,8 @@ body {
 
 /* CodeMirror's premade divs */
 .CodeMirror {
-    height: 100%;
-    background: var(--bg) !important; /* !important is needed because codemirrors own stylesheets are aggresive and this doesnt overwrite them without it */
+    height: calc(100vh - 7.3rem) !important; /* !important is needed because codemirrors own stylesheets are aggresive and this doesnt overwrite them without it */
+    background: var(--bg) !important;
     color: var(--text) !important;
     font-family: monospace;
     font-size: 1rem;
@@ -52,17 +52,13 @@ body {
     border-left: 1px solid var(--text) !important;
 }
 
-.editor-wrapper {
-    height: calc(100% - 5.27rem);
-}
+/* end CodeMirror divs */
 
 .editor-panel, .state-panel {
     background: var(--panel);
     padding: 1rem;
     border: 1px solid var(--border);
 }
-
-/* end CodeMirror divs */
 
 .state-panel {
     display: flex;
@@ -73,12 +69,29 @@ body {
 .registers-panel, .log-panel {
     flex: 0 0 50%;
     border: 1px solid var(--border);
+    overflow: hidden;
+    min-height: 0;
+}
+
+.registers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
 }
 
 .toolbar {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
+}
+
+.toolbar label {
+    min-width: 2.5rem;
+    color: var(--muted);
+}
+
+#speed-display {
+    min-width: 2.5rem;
+    color: var(--muted);
 }
 
 button {
@@ -116,7 +129,6 @@ button {
 .pc {
     padding: 0.5rem;
     font-size: 1.2rem;
-    border-bottom: 1px solid var(--border);
 }
 
 .pc-value {
@@ -139,3 +151,10 @@ button {
 #log-output .error {
     color: var(--accent1);
 }
+
+/* for syntax highlighting */
+css.cm-s-custom .cm-keyword  { color: #ff2d55; } /* instructions */
+.cm-s-custom .cm-variable { color: #00ff9f; } /* registers */
+.cm-s-custom .cm-def      { color: #ffee00; } /* labels */
+.cm-s-custom .cm-number   { color: #bf00ff; } /* numbers  */
+.cm-s-custom .cm-comment  { color: var(--muted); font-style: italic; } /* comments  */

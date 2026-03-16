@@ -5,6 +5,16 @@ const cpu = {
         BX: 0,
         CX: 0,
         DX: 0,
+
+        EAX: 0,
+        EBX: 0,
+        ECX: 0,
+        EDX: 0,
+
+        RAX: 0,
+        RBX: 0,
+        RCX: 0,
+        RDX: 0,
     },
     PC: 0,
     flags: {
@@ -18,7 +28,7 @@ function parseLine(line) {
     // remove ; comments
     line = line.split(";")[0].trim(); 
     if (line === "") return null;
-    const parts = line.split(" "); // parts of the line, operation etc
+    const parts = line.split(" "); // parts of the line, operation, destination etc
     const op = parts[0]; // operation
     const args = parts.slice(1).join(" ").split(", ") // splits the arguments of the line into an array
     return { raw: line, op: op, args: args };
@@ -83,16 +93,44 @@ function execute(inst) {
             cpu.PC = labels[inst.args[0]];
             break;
         }
-        // jump if zero flag is set (last CMP was equal)
+        // jump if equal
         case "JE": {
             if (cpu.flags.zero === true) {
                 cpu.PC = labels[inst.args[0]];
             }
             break;
         }
-        // jump if zero flag is clear (last CMP was not equal)
+        // jump if not equal
         case "JNE": {
             if (cpu.flags.zero === false) {
+                cpu.PC = labels[inst.args[0]];
+            }
+            break;
+        }
+        // jump if greater than
+        case "JG": {
+            if (cpu.flags.zero === false && cpu.flags.carry === false) {
+                cpu.PC = labels[inst.args[0]];
+            }
+            break;
+        }
+        // jump if greater or equal
+        case "JGE": {
+            if (cpu.flags.zero === true || cpu.flags.carry === false) {
+                cpu.PC = labels[inst.args[0]];
+            }
+            break;
+        }
+        // jump if less than
+        case "JL": {
+            if (cpu.flags.carry === true) {
+                cpu.PC = labels[inst.args[0]];
+            }
+            break;
+        }
+        // jump if less or equal
+        case "JLE": {
+            if (cpu.flags.zero === true || cpu.flags.carry === true) {
                 cpu.PC = labels[inst.args[0]];
             }
             break;

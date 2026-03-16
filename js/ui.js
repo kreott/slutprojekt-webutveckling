@@ -5,28 +5,29 @@ const btnReset = document.getElementById("btn-reset");
 // text editor
 const editor = CodeMirror.fromTextArea(document.getElementById("code-input"), {
     lineNumbers: true,
-    mode: "gas",
-    theme: "default",
+    mode: "asm",
+    theme: "custom",
     indentWithTabs: false,
     tabSize: 4,
     autoCloseBrackets: true,
 });
 
 // initialize editor with a placeholder
-editor.setValue(`
-    MOV AX, 0
-    MOV BX, 1
-    MOV CX, 7
-    loop:
-        ADD AX, BX
-        ADD BX, AX
-        SUB CX, 1
-        CMP CX, 0
-        JNE loop
-`);
+editor.setValue(
+`mov ax, 0
+mov bx, 1
+mov cx, 7
+loop:
+    add ax, bx
+    add bx, ax
+    sub cx, 1
+    cmp cx, 0
+    jne loop`
+);
 
 // speed settings
 const speedSlider = document.getElementById("speed-slider");
+speedSlider.value = 0; // initialize it as 0 cause it wasnt working in the html for whatever reason
 const speedSpan = document.getElementById("speed-display");
 
 // handle slider label
@@ -93,6 +94,7 @@ btnReset.addEventListener("click", () => {
 function updateRegisters() {
     Object.keys(cpu.registers).forEach(reg => {
         let label = document.getElementById(`reg-${reg}`);
+        if (!label) return; // skip if no matching element
         label.querySelector(".reg-value").textContent = cpu.registers[reg]; 
     });
 }
