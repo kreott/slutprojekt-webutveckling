@@ -10,11 +10,6 @@ const cpu = {
         EBX: 0,
         ECX: 0,
         EDX: 0,
-
-        RAX: 0,
-        RBX: 0,
-        RCX: 0,
-        RDX: 0,
     },
     PC: 0,
     flags: {
