@@ -1,4 +1,4 @@
-// i spend 30 minutes writing comments for this
+// i spent 30 minutes writing comments for this
 function createRegisters() {
     // backing storage for the 4 general purpose register families (A, B, C, D)
     // Uint32Array forces every value to be a 32 bit unsigned integer
@@ -96,11 +96,8 @@ const cpu = {
 
 const memory = new Uint8Array(1024 * 1024); // 1 megabyte
 
-function read32(addr) {
-    return (memory[addr] << 24) |
-           (memory[addr + 1] << 16) |
-           (memory[addr + 2] << 8) |
-           (memory[addr + 3]); 
+function read8(addr) {
+    return (memory[addr]);
 }
 
 function read16(addr) {
@@ -108,8 +105,11 @@ function read16(addr) {
            (memory[addr + 1]);
 }
 
-function read8(addr) {
-    return (memory[addr]);
+function read32(addr) {
+    return (memory[addr] << 24) |
+           (memory[addr + 1] << 16) |
+           (memory[addr + 2] << 8) |
+           (memory[addr + 3]); 
 }
 
 function write8(addr, val) {
@@ -164,16 +164,39 @@ function loadProgram(code) {
     lines = parsed.filter(line => !line.raw.endsWith(":"));
 }
 
+// checks for typos and invalid arguments
+function isValidArg(str) {
+    if (cpu.regs[str] !== undefined) 
+        return true;
+    else if (!isNaN(resolveVal(str))) 
+        return true;
+
+    return false;
+}
+
+// checks for errors and typos
 function validate(code) {
+    const jumpOps = ["JMP", "JE", "JNE", "JG", "JGE", "JL", "JLE", "CALL"];
     const parsed = code.split("\n").map(parseLine).filter(line => line !== null);
     const errors = [];
 
     parsed.forEach((line, index) => {
         if (line.raw.endsWith(":")) return; // skip labels
 
+        // check instructions
         if (!instructions[line.op]) {
             errors.push(`line ${index + 1}: unknown instruction "${line.op}"`);
         }
+
+        // skip checking arguments if instruction is a jump
+        if (jumpOps.includes(line.op)) return;
+
+        // check arguments
+        line.args.forEach(arg => {
+            if (!isValidArg(arg)) {
+                errors.push(`line ${index + 1}: invalid argument "${arg}"`);
+            }
+        });
     });
 
     return errors;
@@ -185,13 +208,13 @@ function validate(code) {
 // gets the value of a register or a plain number
 // "EAX" -> cpu.regs.EAX, "42" -> 42
 function resolveVal(val) {
-    if (cpu.regs[val] !== undefined) {
+    if (cpu.regs[val] !== undefined) { // check registers first
         return cpu.regs[val];
     }
-    if (isMemRef(val)) {
+    if (isMemRef(val)) { // if memory reference
         return read32(resolveVal(derefMem(val)));
     }
-    if (val.startsWith("0X")) {
+    if (val.startsWith("0X")) { // if hex value
         return parseInt(val, 16);
     }
     return Number(val);
@@ -211,7 +234,6 @@ function derefMem(arg) {
 // if dst is something like [EAX] it writes to that address in memory
 // otherwise just writes to the register directly
 function writeDst(dst, val) {
-    console.log("writeDst:", dst, val);
     if (isMemRef(dst)) {
         write32(resolveVal(derefMem(dst)), val);
     } else {
@@ -357,30 +379,35 @@ const instructions = {
         }
     },
 
+    // jump if greater
     JG(args) {
         if (!cpu.flags.ZERO && cpu.flags.SIGN === cpu.flags.OVERFLOW) {
             cpu.regs.EIP = labels[args[0]];
         }
     },
 
+    // jump if greater or equal
     JGE(args) {
         if (cpu.flags.SIGN === cpu.flags.OVERFLOW) {
             cpu.regs.EIP = labels[args[0]];
         }
     },
 
+    // jump if less
     JL(args) {
         if (!cpu.flags.ZERO && cpu.flags.SIGN !== cpu.flags.OVERFLOW) {
             cpu.regs.EIP = labels[args[0]];
         }
     },
 
+    // jump if less or equal
     JLE(args) {
         if (cpu.flags.ZERO || cpu.flags.SIGN !== cpu.flags.OVERFLOW) {
             cpu.regs.EIP = labels[args[0]];
         }
     },
 
+    // push to stack
     PUSH(args) {
         const val = resolveVal(args[0]);
         
@@ -388,6 +415,7 @@ const instructions = {
         write32(cpu.regs.ESP, val);
     },
 
+    // pop from stack
     POP(args) {
         const dest = args[0];
         const val = read32(cpu.regs.ESP);
@@ -396,18 +424,21 @@ const instructions = {
         writeDst(dest, val);
     },
     
+    // call function
     CALL(args) {
         cpu.regs.ESP -= 4;
         write32(cpu.regs.ESP, cpu.regs.EIP + 1);
         cpu.regs.EIP = labels[args[0]]
     },
 
+    // return from function
     RET() {
         cpu.regs.EIP = read32(cpu.regs.ESP);
         cpu.regs.ESP += 4;
     }
 };
 
+// execute instruction
 function execute(inst) {
     const fn = instructions[inst.op];
 
@@ -418,6 +449,7 @@ function execute(inst) {
     }
 }
 
+// execute one line
 function step() {
     // bounds check, checks if we're at the end of the code
     if (cpu.regs.EIP >= lines.length) {

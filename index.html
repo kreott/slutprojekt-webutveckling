@@ -3,7 +3,7 @@
     <head>
         <title>Assembly Playground</title>
         <link rel="icon" type="image/x-icon" href="icon.jpg">
-        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/index.css">
         <script src="js/asm.js" defer></script>
         <script src="js/ui.js" defer></script>
 
@@ -11,6 +11,9 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
         <script src="js/codemirror/asm-mode.js"></script>
+
+        <!-- import google font -->
+        <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
     </head>
 
     <body>
@@ -24,6 +27,7 @@
                     <button id="btn-run">RUN</button>
                     <button id="btn-step">STEP</button>
                     <button id="btn-reset">STOP</button>
+                    <button id="btn-help"><a href="help.html">HELP</a></button>
                 </div>
                 <textarea id="code-input"></textarea>
             </div>
@@ -31,7 +35,7 @@
                 <div class="registers-panel">
                     <div class="registers-header">
                         <h2>REGISTERS</h2>
-                        <button id="btn-show-regs" class="btn-all-regs">Show all registers</button>
+                        <button id="btn-show-regs" class="btn-all-regs">Show all</button>
                     </div>
                     <div class="registers-grid">
                         <div class="register" id="reg-EAX">EAX: <span class="reg-value">0</span></div>
@@ -57,8 +61,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- full registers popup -->
         <div id="reg-popup">
             <div class="reg-popup-inner">
                 <div class="reg-popup-titlebar">

@@ -1,0 +1,166 @@
+:root {
+    --bg: #0a0a0f;
+    --panel: #0f0f1a;
+    --border: #1e1e3a;
+    --accent: #00ff9f;
+    --error: #ff2d55;
+    --text: #e8e8f0;
+    --muted: #555570;
+    --purple: #bf00ff;
+    --yellow: #ffee00;
+    --orange: #ff9f00;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Fira Code', monospace;
+}
+
+.page {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    min-height: 100vh;
+}
+
+.sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
+
+.sidebar h1 {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+}
+
+.sidebar a {
+    display: block;
+    padding: 0.3rem 0.5rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.sidebar a:hover {
+    color: var(--text);
+}
+
+.sidebar .group {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin: 1rem 0 0.3rem 0.5rem;
+}
+
+.content {
+    padding: 2rem 3rem;
+    max-width: 800px;
+}
+
+.content h1 {
+    font-size: 1.5rem;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.content > p {
+    color: var(--muted);
+    margin-bottom: 2rem;
+}
+
+.section {
+    margin-bottom: 2.5rem;
+}
+
+.section h2 {
+    color: var(--accent);
+    font-size: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.section h3 {
+    color: var(--yellow);
+    font-size: 0.9rem;
+    margin: 1rem 0 0.4rem;
+}
+
+.section p {
+    color: var(--text);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+}
+
+/* instruction rows */
+.row-header {
+    display: grid;
+    grid-template-columns: 70px 1fr 1fr;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 70px 1fr 1fr;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.code {
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem;
+    line-height: 1.9;
+    margin: 0.5rem 0;
+}
+
+/* syntax colors */
+.keyword  { 
+    color: var(--error); 
+}
+
+.reg { 
+    color: var(--accent); 
+}
+
+.num { 
+    color: var(--purple); 
+}
+
+.label { 
+    color: var(--yellow); 
+}
+
+.comment { 
+    color: var(--muted); font-style: italic; 
+}
+
+.op  { 
+    color: var(--error); font-weight: bold; 
+}
+
+.row-header-gap {
+    margin-top: 0.5rem;
+}
+
+.note {
+    margin-top: 0.8rem;
+}

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Assembly Playground - Help</title>
+    <link rel="icon" type="image/x-icon" href="icon.jpg">
+    <link rel="stylesheet" href="css/help.css">
+
+    <!-- import google font -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="page">
+    <div class="sidebar">
+        <h1>ASM PLAYGROUND</h1>
+        <a href="index.html">Back to Playground</a>
+        <span class="group">Concepts</span>
+        <a href="#registers">Registers</a>
+        <a href="#flags">Flags</a>
+        <a href="#memory">Memory</a>
+        <span class="group">Instructions</span>
+        <a href="#data">Data movement</a>
+        <a href="#arithmetic">Arithmetic</a>
+        <a href="#bitwise">Bitwise</a>
+        <a href="#jumps">Jumps</a>
+        <a href="#stack">Stack and calls</a>
+        <a href="#syntax">Syntax</a>
+    </div>
+
+    <div class="content">
+        <h1>Assembly Playground - Help</h1>
+        <p>Reference page for the simulator. covers instructions, registers, flags, memory etc.</p>
+
+        <!-- registers -->
+        <div class="section" id="registers">
+            <h2>Registers</h2>
+            <p>Registers are small storage slots inside the CPU, almost like pre-made variables! There are 4 general purpose ones (A, B, C, D) and each one has 4 names that all point to different parts of the same 32-bit value.</p>
+
+            <p><span class="keyword">EAX</span> is the full 32-bit register. AX is the lower 16 bits of it, and AH/AL are the two halves of AX. They all point to the same value, so changing one affects the others.</p>
+            <p><span class="op">EBX</span>, <span class="op">ECX</span> and <span class="op">EDX</span> work exactly the same way with their own sub-registers (BX/BH/BL, etc).</p>
+
+            <h3>Special registers</h3>
+            <p>These dont have sub-registers, they each just do one specific thing.</p>
+
+            <div class="row-header">
+                <div>name</div><div>full name</div><div>what it does</div>
+            </div>
+            <div class="row">
+                <div class="op">EIP</div>
+                <div>Instruction Pointer</div>
+                <div>tracks which instruction runs next. jumps modify this directly.</div>
+            </div>
+            <div class="row">
+                <div class="op">ESP</div>
+                <div>Stack Pointer</div>
+                <div>points to the top of the stack. PUSH decreases it, POP increases it. starts at 1MB.</div>
+            </div>
+            <div class="row">
+                <div class="op">EBP</div>
+                <div>Base Pointer</div>
+                <div>usually marks the bottom of the current function's stack frame.</div>
+            </div>
+            <div class="row">
+                <div class="op">ESI</div>
+                <div>Source Index</div>
+                <div>general purpose, traditionally used as a source pointer in memory operations.</div>
+            </div>
+            <div class="row">
+                <div class="op">EDI</div>
+                <div>Destination Index</div>
+                <div>general purpose, traditionally a destination pointer.</div>
+            </div>
+            <p class="note">*note: currently only EIP and ESP have functionality attached to them.</p>
+        </div>
+
+        <!-- flags -->
+        <div class="section" id="flags">
+            <h2>Flags</h2>
+            <p>Flags are set automatically after arithmetic and cmp instructions. the jump instructions then read them to decide whether to jump or not</p>
+
+            <div class="row-header">
+                <div>flag</div><div>meaning</div><div>when it gets set</div>
+            </div>
+            <div class="row">
+                <div class="op">ZERO</div>
+                <div>result was zero</div>
+                <div>last arithmetic result was 0, or both sides of cmp were equal</div>
+            </div>
+            <div class="row">
+                <div class="op">CARRY</div>
+                <div>unsigned underflow</div>
+                <div>subtraction went negative (left side smaller than right)</div>
+            </div>
+            <div class="row">
+                <div class="op">SIGN</div>
+                <div>result was negative</div>
+                <div>highest bit of result is set, meaning it is negative as a signed number</div>
+            </div>
+            <div class="row">
+                <div class="op">OVERFLOW</div>
+                <div>signed overflow</div>
+                <div>set when a number overflows, wrapping around to a negative number</div>
+            </div>
+        </div>
+
+        <!-- memory -->
+        <div class="section" id="memory">
+            <h2>Memory</h2>
+            <p>The simulator has 1MB of memory. You access it by wrapping an address in square brackets.</p>
+
+            <div class="code">
+                <span class="keyword">MOV</span> [<span class="num">0x1000</span>], <span class="reg">EAX</span>    <span class="comment">; write EAX to address 0x1000</span><br>
+                <span class="keyword">MOV</span> <span class="reg">EBX</span>, [<span class="num">0x1000</span>]    <span class="comment">; read from 0x1000 into EBX</span><br>
+                <span class="keyword">MOV</span> [<span class="reg">EAX</span>], <span class="num">42</span>         <span class="comment">; use EAX as the address</span>
+            </div>
+
+            <p class="note">*note: reads and writes are (almost) always 32-bit (4 bytes at once). writing to address 0x100 also changes 0x101, 0x102 and 0x103.</p>
+        </div>
+
+        <!-- data movement -->
+        <div class="section" id="data">
+            <h2>Data movement</h2>
+
+            <div class="row-header">
+                <div>op</div><div>what it does</div><div>example</div>
+            </div>
+            <div class="row">
+                <div class="op">MOV</div>
+                <div>copies a value into a register or memory address. doesnt affect flags.</div>
+                <div>
+                    <span class="keyword">MOV</span> <span class="reg">EAX</span>, <span class="num">42</span><br>
+                    <span class="keyword">MOV</span> <span class="reg">EBX</span>, <span class="reg">EAX</span><br>
+                    <span class="keyword">MOV</span> [<span class="num">0x200</span>], <span class="reg">EAX</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- arithmetic -->
+        <div class="section" id="arithmetic">
+            <h2>Arithmetic</h2>
+
+            <div class="row-header">
+                <div>op</div><div>what it does</div><div>example</div>
+            </div>
+            <div class="row">
+                <div class="op">ADD</div>
+                <div>adds src to dest</div>
+                <div><span class="keyword">ADD</span> <span class="reg">EAX</span>, <span class="num">10</span></div>
+            </div>
+            <div class="row">
+                <div class="op">SUB</div>
+                <div>subtracts src from dest</div>
+                <div><span class="keyword">SUB</span> <span class="reg">EAX</span>, <span class="num">5</span></div>
+            </div>
+            <div class="row">
+                <div class="op">MUL</div>
+                <div>multiplies dest by src</div>
+                <div><span class="keyword">MUL</span> <span class="reg">EAX</span>, <span class="num">3</span></div>
+            </div>
+            <div class="row">
+                <div class="op">DIV</div>
+                <div>divides dest by src. dont divide by zero, it'll break please dont 🙏🙏🙏</div>
+                <div><span class="keyword">DIV</span> <span class="reg">EAX</span>, <span class="num">2</span></div>
+            </div>
+            <div class="row">
+                <div class="op">INC</div>
+                <div>adds 1 to dest</div>
+                <div><span class="keyword">INC</span> <span class="reg">ECX</span></div>
+            </div>
+            <div class="row">
+                <div class="op">DEC</div>
+                <div>subtracts 1 from dest</div>
+                <div><span class="keyword">DEC</span> <span class="reg">ECX</span></div>
+            </div>
+            <div class="row">
+                <div class="op">CMP</div>
+                <div>updates cpu flags. compares if greater than or equal to and sets appropriate flags</div>
+                <div>
+                    <span class="keyword">CMP</span> <span class="reg">ECX</span>, <span class="num">0</span><br>
+                    <span class="keyword">JE</span> <span class="label">.done</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- bitwise -->
+        <div class="section" id="bitwise">
+            <h2>Bitwise</h2>
+            <p>These work on individual bits instead of whole numbers.</p>
+
+            <div class="row-header">
+                <div>op</div><div>what it does</div><div>example</div>
+            </div>
+            <div class="row">
+                <div class="op">AND</div>
+                <div>output bit is 1 only if both input bits are 1</div>
+                <div><span class="keyword">AND</span> <span class="reg">EAX</span>, <span class="num">0xFF</span> <span class="comment">; keep only lowest 8 bits</span></div>
+            </div>
+            <div class="row">
+                <div class="op">OR</div>
+                <div>output bit is 1 if at least one input bit is 1</div>
+                <div><span class="keyword">OR</span> <span class="reg">EAX</span>, <span class="num">0x100</span> <span class="comment">; set bit 8</span></div>
+            </div>
+            <div class="row">
+                <div class="op">XOR</div>
+                <div>output bit is 1 only if the two input bits differ</div>
+                <div><span class="keyword">XOR</span> <span class="reg">EAX</span>, <span class="reg">EAX</span> <span class="comment">; EAX = 0</span></div>
+            </div>
+            <div class="row">
+                <div class="op">NOT</div>
+                <div>flips every bit, 1 becomes 0 and 0 becomes 1</div>
+                <div><span class="keyword">NOT</span> <span class="reg">EAX</span></div>
+            </div>
+        </div>
+
+        <!-- jumps -->
+        <div class="section" id="jumps">
+            <h2>Jumps</h2>
+            <p>These move execution to a label. the conditional ones check flags set by the last compare.</p>
+            <p class="note">*note: always put CMP right before a jump or the flags might be wrong from a previous instruction.</p>
+
+            <div class="row-header row-header-gap">
+                <div>op</div><div>what it does</div><div>example</div>
+            </div>
+            <div class="row">
+                <div class="op">JMP</div>
+                <div>always jumps, no condition</div>
+                <div><span class="keyword">JMP</span> <span class="label">.end</span></div>
+            </div>
+            <div class="row">
+                <div class="op">JE</div>
+                <div>jumps if zero flag is set (equal)</div>
+                <div><span class="keyword">CMP</span> <span class="reg">EAX</span>, <span class="reg">EBX</span><br><span class="keyword">JE</span> <span class="label">.equal</span></div>
+            </div>
+            <div class="row">
+                <div class="op">JNE</div>
+                <div>jumps if zero flag is clear (not equal)</div>
+                <div><span class="keyword">CMP</span> <span class="reg">ECX</span>, <span class="num">0</span><br><span class="keyword">JNE</span> <span class="label">.loop</span></div>
+            </div>
+            <div class="row">
+                <div class="op">JG</div>
+                <div>jumps if dest was greater than src</div>
+                <div><span class="keyword">CMP</span> <span class="reg">EAX</span>, <span class="num">10</span><br><span class="keyword">JG</span> <span class="label">.big</span></div>
+            </div>
+            <div class="row">
+                <div class="op">JGE</div>
+                <div>jumps if dest was greater or equal</div>
+                <div><span class="keyword">JGE</span> <span class="label">.label</span></div>
+            </div>
+            <div class="row">
+                <div class="op">JL</div>
+                <div>jumps if dest was less than src</div>
+                <div><span class="keyword">CMP</span> <span class="reg">EAX</span>, <span class="num">10</span><br><span class="keyword">JL</span> <span class="label">.small</span></div>
+            </div>
+            <div class="row">
+                <div class="op">JLE</div>
+                <div>jumps if dest was less or equal</div>
+                <div><span class="keyword">JLE</span> <span class="label">.label</span></div>
+            </div>
+        </div>
+
+        <!-- stack -->
+        <div class="section" id="stack">
+            <h2>Stack and calls</h2>
+            <p>The stack is a region of memory that grows downward. ESP points to the top of it.</p>
+
+            <div class="code">
+                <span class="comment">; typical function call</span><br>
+                <span class="keyword">PUSH</span> <span class="reg">EAX</span><br>
+                <span class="keyword">CALL</span> <span class="label">.myfunc</span><br>
+                <span class="keyword">POP</span> <span class="reg">EAX</span><br>
+                <br>
+                <span class="label">.myfunc:</span><br>
+                <span class="keyword">MOV</span> <span class="reg">EAX</span>, <span class="num">99</span><br>
+                <span class="keyword">RET</span>
+            </div>
+
+            <div class="row-header">
+                <div>op</div><div>what it does</div><div>example</div>
+            </div>
+            <div class="row">
+                <div class="op">PUSH</div>
+                <div>ESP -= 4, then writes value to memory at ESP</div>
+                <div><span class="keyword">PUSH</span> <span class="reg">EAX</span></div>
+            </div>
+            <div class="row">
+                <div class="op">POP</div>
+                <div>reads from memory at ESP into dest, then ESP += 4</div>
+                <div><span class="keyword">POP</span> <span class="reg">EBX</span></div>
+            </div>
+            <div class="row">
+                <div class="op">CALL</div>
+                <div>pushes return address onto stack then jumps to label</div>
+                <div><span class="keyword">CALL</span> <span class="label">.myfunc</span></div>
+            </div>
+            <div class="row">
+                <div class="op">RET</div>
+                <div>pops the return address and jumps back to it</div>
+                <div><span class="keyword">RET</span></div>
+            </div>
+        </div>
+
+        <!-- syntax -->
+        <div class="section" id="syntax">
+            <h2>Syntax</h2>
+
+            <h3>Comments</h3>
+            <div class="code">
+                <span class="keyword">MOV</span> <span class="reg">EAX</span>, <span class="num">1</span>  <span class="comment">; semicolons start a comment, everything after is ignored</span>
+            </div>
+
+            <h3>Labels</h3>
+            <p>A label is just a name followed by a colon. the dot at the start is optional but i used it everywhere to make them easier to spot.</p>
+            <div class="code">
+                <span class="label">.loop:</span><br>
+                <span class="keyword">DEC</span> <span class="reg">ECX</span><br>
+                <span class="keyword">JNE</span> <span class="label">.loop</span>
+            </div>
+
+            <h3>Numbers</h3>
+            <div class="code">
+                <span class="keyword">MOV</span> <span class="reg">EAX</span>, <span class="num">255</span>   <span class="comment">; decimal</span><br>
+                <span class="keyword">MOV</span> <span class="reg">EAX</span>, <span class="num">0xFF</span>  <span class="comment">; same value in hex</span>
+            </div>
+
+            <h3>Memory references</h3>
+            <div class="code">
+                <span class="keyword">MOV</span> [<span class="num">0x1000</span>], <span class="reg">EAX</span>  <span class="comment">; write to address 0x1000</span><br>
+                <span class="keyword">MOV</span> <span class="reg">EBX</span>, [<span class="reg">EAX</span>]    <span class="comment">; treat EAX as a memory address and read from it</span>
+            </div>
+
+            <p class="note">*note: everything is case-insensitive so MOV and mov both work fine.</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
