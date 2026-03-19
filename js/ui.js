@@ -1,8 +1,9 @@
 // buttons
-const btnRun = document.getElementById("btn-run");
-const btnStep = document.getElementById("btn-step");
+const btnRun   = document.getElementById("btn-run");
+const btnStep  = document.getElementById("btn-step");
 const btnReset = document.getElementById("btn-reset");
-// text editor
+
+// code editor
 const editor = CodeMirror.fromTextArea(document.getElementById("code-input"), {
     lineNumbers: true,
     mode: "asm",
@@ -12,114 +13,218 @@ const editor = CodeMirror.fromTextArea(document.getElementById("code-input"), {
     autoCloseBrackets: true,
 });
 
-// initialize editor with a placeholder
+// example code
 editor.setValue(
-`mov ax, 0
-mov bx, 1
-mov cx, 7
-loop:
-    add ax, bx
-    add bx, ax
-    sub cx, 1
-    cmp cx, 0
-    jne loop`
+`MOV EAX, 10
+MOV EBX, 3
+
+ADD EAX, EBX
+SUB EAX, 1
+MUL EAX, 2
+
+AND EAX, 0xFF
+OR  EAX, 0x100
+XOR EAX, 0x100
+NOT EBX
+
+MOV ECX, 5
+
+.loop:
+    INC EAX
+    DEC ECX
+    CMP ECX, 0
+    JNE .loop
+
+PUSH EAX
+CALL .myfunc
+POP EBX
+
+JMP .end
+
+.myfunc:
+    MOV EDX, EAX
+    ADD EDX, 100
+    RET
+
+.end:
+    MOV ECX, 0`
 );
 
-// speed settings
+// speed slider, setting value here because the html default wasnt sticking
 const speedSlider = document.getElementById("speed-slider");
-speedSlider.value = 0; // initialize it as 0 cause it wasnt working in the html for whatever reason
-const speedSpan = document.getElementById("speed-display");
+const speedSpan   = document.getElementById("speed-display");
 
-// handle slider label
+speedSlider.value = 0;
 speedSpan.textContent = "off";
+
 speedSlider.addEventListener("input", () => {
-    if (speedSlider.value == "0") {
-        speedSpan.textContent = "off";
-    } else {
-        speedSpan.textContent = (speedSlider.value / 1000).toFixed(1) + "s"
-    }
+    speedSpan.textContent = speedSlider.value == "0"
+        ? "off"
+        : (speedSlider.value / 1000).toFixed(1) + "s";
 });
 
-// handle buttons
-
-// run full code button
 let isRunning = false;
+
+function reset() {
+    ["EAX", "EBX", "ECX", "EDX", "EBP", "ESI", "EDI", "EIP"].forEach(reg => {
+        cpu.regs[reg] = 0;
+    });
+    cpu.regs.ESP = 1024 * 1024; // 1 MB
+
+    cpu.flags.ZERO     = false;
+    cpu.flags.CARRY    = false;
+    cpu.flags.SIGN     = false;
+    cpu.flags.OVERFLOW = false;
+
+    lines = [];
+    updateUIRegisters();
+    updateUIFlags();
+
+    document.getElementById("log-output").innerHTML = "";
+}
+
 btnRun.addEventListener("click", () => {
-    if (isRunning) return;
+    if (isRunning) {
+        reset();
+        return;
+    }
+
+    reset();
+
+    const errors = validate(editor.getValue());
+    if (errors.length > 0) {
+        errors.forEach(e => log(e, true));
+        return;
+    }
+
     isRunning = true;
     btnRun.disabled = true;
+
+    if (cpu.regs.EIP === 0) loadProgram(editor.getValue());
+
     if (speedSlider.value == "0") {
-        if (cpu.PC === 0) {
-            loadProgram(editor.getValue());
-        }
-        while (cpu.PC < lines.length) {
-            step();
-        }
+        while (cpu.regs.EIP < lines.length) step();
         btnRun.disabled = false;
         isRunning = false;
     } else {
-        if (cpu.PC === 0) {
-            loadProgram(editor.getValue());
-        }
         run(speedSlider.value);
     }
 });
 
-// execute next line
 btnStep.addEventListener("click", () => {
-    if (cpu.PC === 0) {
+    if (isRunning) return;
+    if (cpu.regs.EIP === 0) {
+        const errors = validate(editor.getValue());
+        if (errors.length > 0) {
+            errors.forEach(e => log(e, true));
+            return;
+        }
         loadProgram(editor.getValue());
     }
     step();
 });
 
-// set everything to 0 / false
-btnReset.addEventListener("click", () => {
-    cpu.PC = 0;
-    Object.keys(cpu.registers).forEach(reg => {
-    cpu.registers[reg] = 0;
-    });
-    cpu.flags.carry = false;
-    cpu.flags.zero = false;
-    lines = [];
-    updateRegisters();
-    updateFlags();
-    updatePC();
+btnReset.addEventListener("click", reset);
 
-    // reset the log and delete all child elements
-    document.querySelector("#log-output").innerHTML = "";
-});
+const MAIN_REGISTER_NAMES = ["EAX", "EIP", "EBX", "ESP", "ECX", "EBP", "EDX", "ESI"];
 
-// updates the registers value (the labels)
-function updateRegisters() {
-    Object.keys(cpu.registers).forEach(reg => {
-        let label = document.getElementById(`reg-${reg}`);
-        if (!label) return; // skip if no matching element
-        label.querySelector(".reg-value").textContent = cpu.registers[reg]; 
+function updateUIRegisters() {
+    MAIN_REGISTER_NAMES.forEach(reg => {
+        const el = document.getElementById(`reg-${reg}`);
+        if (el) el.querySelector(".reg-value").textContent = cpu.regs[reg];
     });
+
+    const popup = document.getElementById("reg-popup");
+    if (popup?.style.display !== "none") renderRegisterPopup();
 }
 
-// updates the flags value (the labels)
-function updateFlags() {
+function updateUIFlags() {
     Object.keys(cpu.flags).forEach(flag => {
-        let label = document.getElementById(`flag-${flag}`);
-        label.querySelector(".flag-value").textContent = cpu.flags[flag];
+        const el = document.getElementById(`flag-${flag}`);
+        if (el) el.querySelector(".flag-value").textContent = cpu.flags[flag];
     });
 }
 
-// update program counter 
-function updatePC() {
-    let label = document.getElementById("pc-display")
-    label.querySelector(".pc-value").textContent = cpu.PC;
-}
-
-// output 
 function log(message, isError = false) {
     const entry = document.createElement("div");
     entry.textContent = message;
-    if (isError) {
-        entry.classList.add("error");
-    }
+    if (isError) entry.classList.add("error");
     const logOutput = document.getElementById("log-output");
     logOutput.appendChild(entry);
+    logOutput.scrollTop = logOutput.scrollHeight; // automatically scrolls to the bottom
+
 }
+
+const POPUP_GROUPS = [
+    { label: "A",   regs: ["EAX", "AX", "AH", "AL"] },
+    { label: "B",   regs: ["EBX", "BX", "BH", "BL"] },
+    { label: "C",   regs: ["ECX", "CX", "CH", "CL"] },
+    { label: "D",   regs: ["EDX", "DX", "DH", "DL"] },
+    { label: "Ptr", regs: ["ESP", "EBP", "ESI", "EDI", "EIP"] },
+];
+
+function renderRegisterPopup() {
+    const container = document.getElementById("reg-popup-body");
+    if (!container) return;
+    container.innerHTML = "";
+
+    POPUP_GROUPS.forEach(group => {
+        const section = document.createElement("div");
+        section.className = "reg-popup-group";
+
+        for (let i = 0; i < group.regs.length; i += 2) {
+            const row = document.createElement("div");
+            row.className = "reg-popup-row";
+
+            const a = group.regs[i];
+            const b = group.regs[i + 1];
+
+            row.innerHTML = b
+                ? `<span class="reg-name">${a}:</span><span class="reg-val">${cpu.regs[a]}</span><span class="reg-name">${b}:</span><span class="reg-val">${cpu.regs[b]}</span>`
+                : `<span class="reg-name">${a}:</span><span class="reg-val">${cpu.regs[a]}</span>`;
+
+            section.appendChild(row);
+        }
+
+        container.appendChild(section);
+    });
+}
+
+function openRegisterPopup() {
+    renderRegisterPopup();
+    document.getElementById("reg-popup").style.display = "block";
+}
+
+function closeRegisterPopup() {
+    document.getElementById("reg-popup").style.display = "none";
+}
+
+function makeDraggable(popup, handle) {
+    let dragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    handle.addEventListener("mousedown", (e) => {
+        dragging = true;
+        offsetX = e.clientX - popup.getBoundingClientRect().left;
+        offsetY = e.clientY - popup.getBoundingClientRect().top;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+        popup.style.left = (e.clientX - offsetX) + "px";
+        popup.style.top  = (e.clientY - offsetY) + "px";
+    });
+
+    document.addEventListener("mouseup", () => dragging = false);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("btn-show-regs")?.addEventListener("click", openRegisterPopup);
+    document.getElementById("btn-close-reg-popup")?.addEventListener("click", closeRegisterPopup);
+
+    makeDraggable(
+        document.querySelector(".reg-popup-inner"),
+        document.querySelector(".reg-popup-titlebar")
+    );
+});

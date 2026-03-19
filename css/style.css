@@ -1,11 +1,11 @@
 :root {
-    --bg: #0a0a0f;
-    --panel: #0f0f1a;
+    --bg:     #0a0a0f;
+    --panel:  #0f0f1a;
     --border: #1e1e3a;
     --accent: #00ff9f;
-    --accent1: #ff2d55;
-    --text: #e8e8f0;
-    --muted: #555570;
+    --error:  #ff2d55;
+    --text:   #e8e8f0;
+    --muted:  #555570;
 }
 
 * {
@@ -18,21 +18,19 @@ body {
     background: var(--bg);
     color: var(--text);
     font-family: monospace;
-    overflow-x: hidden;
-    overflow-y: hidden;
+    overflow: hidden;
 }
 
 .app {
     display: grid;
     grid-template-columns: 1fr 1fr;
     height: 100vh;
-    gap: 0;
 }
 
-/* CodeMirror's premade divs */
+/* codemirror premade classes */
 .CodeMirror {
-    height: calc(100vh - 7.3rem) !important; /* !important is needed because codemirrors own stylesheets are aggresive and this doesnt overwrite them without it */
-    background: var(--bg) !important;
+    height: calc(100vh - 7.3rem) !important; /* !important is needed because CodeMirror's stylesheets */
+    background: var(--bg) !important;        /* are aggressive and otherwise it doesnt overwrite anything */
     color: var(--text) !important;
     font-family: monospace;
     font-size: 1rem;
@@ -51,8 +49,6 @@ body {
 .CodeMirror-cursor {
     border-left: 1px solid var(--text) !important;
 }
-
-/* end CodeMirror divs */
 
 .editor-panel, .state-panel {
     background: var(--panel);
@@ -76,6 +72,12 @@ body {
 .registers-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
+}
+
+.registers-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .toolbar {
@@ -104,36 +106,20 @@ button {
     cursor: pointer;
 }
 
-.register {
+.register, .flag, .pc {
     padding: 0.5rem;
     font-size: 1.2rem;
     border-bottom: 1px solid var(--border);
 }
 
-.reg-value {
+.reg-value, .flag-value, .pc-value {
     color: var(--accent);
     font-weight: bold;
 }
 
-.flag {
-    padding: 0.5rem;
-    font-size: 1.2rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.flag-value {
-    color: var(--accent);
-    font-weight: bold;
-}
-
-.pc {
-    padding: 0.5rem;
-    font-size: 1.2rem;
-}
-
-.pc-value {
-    color: var(--accent);
-    font-weight: bold;
+.flags-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
 }
 
 #log-output {
@@ -149,12 +135,65 @@ button {
 }
 
 #log-output .error {
-    color: var(--accent1);
+    color: var(--error);
 }
 
-/* for syntax highlighting */
-css.cm-s-custom .cm-keyword  { color: #ff2d55; } /* instructions */
-.cm-s-custom .cm-variable { color: #00ff9f; } /* registers */
-.cm-s-custom .cm-def      { color: #ffee00; } /* labels */
-.cm-s-custom .cm-number   { color: #bf00ff; } /* numbers  */
-.cm-s-custom .cm-comment  { color: var(--muted); font-style: italic; } /* comments  */
+#reg-popup {
+    display: none;
+}
+
+.reg-popup-inner {
+    position: fixed;
+    top: 100px;
+    left: 100px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    min-width: 240px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.reg-popup-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+    cursor: grab;
+}
+
+.reg-popup-body {
+    padding: 10px;
+}
+
+.reg-popup-group {
+    margin-bottom: 12px;
+}
+
+.reg-popup-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.reg-name {
+    display: inline-block;
+    width: 36px;
+    color: var(--text);
+}
+
+.reg-val {
+    display: inline-block;
+    width: 80px;
+    color: var(--accent);
+}
+
+/* codemirror syntax highlighting */
+.cm-s-custom .cm-keyword  { color: var(--error); }
+.cm-s-custom .cm-variable { color: var(--accent); }
+.cm-s-custom .cm-number   { color: #bf00ff; }
+.cm-s-custom .cm-comment  { color: var(--muted); font-style: italic; }
