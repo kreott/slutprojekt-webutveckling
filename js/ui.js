@@ -3,7 +3,7 @@ const btnRun   = document.getElementById("btn-run");
 const btnStep  = document.getElementById("btn-step");
 const btnReset = document.getElementById("btn-reset");
 
-// code editor setup
+// code editor
 const editor = CodeMirror.fromTextArea(document.getElementById("code-input"), {
     lineNumbers: true,
     mode: "asm",
@@ -13,71 +13,59 @@ const editor = CodeMirror.fromTextArea(document.getElementById("code-input"), {
     autoCloseBrackets: true,
 });
 
-// default program shown when you open the page
+// default program
 editor.setValue(
-`MOV EAX, 10
-MOV EBX, 3
+`section .data
+%define fifty 50
 
-ADD EAX, EBX
-SUB EAX, 1
-MUL EAX, 2
 
-AND EAX, 0xFF
-OR  EAX, 0x100
-XOR EAX, 0x100
-NOT EBX
-
-MOV ECX, 5
+section .text
+mov ecx, 10
+mov eax, fifty
 
 .loop:
-    INC EAX
-    DEC ECX
-    CMP ECX, 0
-    JNE .loop
+    add ebx, eax
+    add eax, ebx
 
-PUSH EAX
-CALL .myfunc
-POP EBX
+    print ecx
+    dec ecx
 
-JMP .end
-
-.myfunc:
-    MOV EDX, EAX
-    ADD EDX, 100
-    RET
-
-.end:
-    MOV ECX, 0`
+    cmp ecx, 0
+    jne .loop`
 );
 
-// speed slider, setting value here because the html default wasnt sticking
+// speed slider
 const speedSlider = document.getElementById("speed-slider");
 const speedSpan   = document.getElementById("speed-display");
 
-speedSlider.value = 0;
+speedSlider.value = 0; // setting here because html default wasnt sticking
 speedSpan.textContent = "off";
 
-// update the label next to the slider when it changes
 speedSlider.addEventListener("input", () => {
     speedSpan.textContent = speedSlider.value == "0"
         ? "off"
         : (speedSlider.value / 1000).toFixed(1) + "s";
 });
 
-// tracks whether the program is currently running in interval mode
 let isRunning = false;
 
-// resets all registers, flags, and clears the output log
+// resets registers, flags, highlights, and the log
 function reset() {
-    ["EAX", "EBX", "ECX", "EDX", "EBP", "ESI", "EDI", "EIP"].forEach(reg => {
+    for (const reg of ["EAX", "EBX", "ECX", "EDX", "EBP", "ESI", "EDI", "EIP"]) {
         cpu.regs[reg] = 0;
-    });
-    cpu.regs.ESP = 1024 * 1024; // start stack at top of memory
+    }
+    cpu.regs.ESP = 1024 * 1024; // stack starts at top of memory
 
     cpu.flags.ZERO     = false;
     cpu.flags.CARRY    = false;
     cpu.flags.SIGN     = false;
     cpu.flags.OVERFLOW = false;
+
+    // remove the highlighted line from the editor if there is one
+    if (highlightedLine !== null) {
+        editor.removeLineClass(highlightedLine, "background", "current-line");
+        highlightedLine = null;
+    }
 
     lines = [];
     updateUIRegisters();
@@ -86,89 +74,103 @@ function reset() {
     document.getElementById("log-output").innerHTML = "";
 }
 
-// run button, resets first, validates, then either runs instantly or with a set interval
 btnRun.addEventListener("click", () => {
+    // if already running, just stop and reset
     if (isRunning) {
         reset();
+        isRunning = false;
         return;
     }
 
     reset();
 
-    // validate before running so errors show up immediately
+    // check for errors before doing anything
     const errors = validate(editor.getValue());
     if (errors.length > 0) {
-        errors.forEach(e => log(e, true));
+        for (const err of errors) log(err, true);
         return;
     }
 
     isRunning = true;
-    btnRun.disabled = true;
-
-    if (cpu.regs.EIP === 0) loadProgram(editor.getValue());
+    loadProgram(editor.getValue());
 
     if (speedSlider.value == "0") {
-        // no delay, run everything in one go
+        // run everything at once with no delay
         while (cpu.regs.EIP < lines.length) step();
-        btnRun.disabled = false;
         isRunning = false;
     } else {
-        // run one instruction at a time with a delay between each
         run(speedSlider.value);
     }
 });
 
-// step button, loads the program on first press, then executes one instruction at a time
 btnStep.addEventListener("click", () => {
     if (isRunning) return;
+
+    // load the program on the first step
     if (cpu.regs.EIP === 0) {
         const errors = validate(editor.getValue());
         if (errors.length > 0) {
-            errors.forEach(e => log(e, true));
+            for (const err of errors) log(err, true);
             return;
         }
         loadProgram(editor.getValue());
     }
+
     step();
 });
 
 btnReset.addEventListener("click", reset);
 
-// the registers shown in the main panel (not the popup)
+// registers shown in the main panel
 const MAIN_REGISTER_NAMES = ["EAX", "EIP", "EBX", "ESP", "ECX", "EBP", "EDX", "ESI"];
 
-// updates the register values shown in the main panel
-// also refreshes the popup if its open
 function updateUIRegisters() {
-    MAIN_REGISTER_NAMES.forEach(reg => {
-        const el = document.getElementById(`reg-${reg}`);
+    for (const reg of MAIN_REGISTER_NAMES) {
+        const el = document.getElementById("reg-" + reg);
         if (el) el.querySelector(".reg-value").textContent = cpu.regs[reg];
-    });
+    }
 
-    // keep the popup in sync if its visible
+    // if the popup is open, keep it in sync too
     const popup = document.getElementById("reg-popup");
-    if (popup?.style.display !== "none") renderRegisterPopup();
+    if (popup && popup.style.display !== "none") renderRegisterPopup();
 }
 
-// updates the flag values shown in the panel
 function updateUIFlags() {
-    Object.keys(cpu.flags).forEach(flag => {
-        const el = document.getElementById(`flag-${flag}`);
+    for (const flag of Object.keys(cpu.flags)) {
+        const el = document.getElementById("flag-" + flag);
         if (el) el.querySelector(".flag-value").textContent = cpu.flags[flag];
-    });
+    }
 }
 
-// adds a message to the output log, errors show in red
+// highlights the current line in the editor based on EIP
+let highlightedLine = null;
+function highlightLine(eip) {
+    // remove the old highlight first
+    if (highlightedLine !== null) {
+        editor.removeLineClass(highlightedLine, "background", "current-line");
+    }
+
+    // lineMap translates EIP (instruction index) to the real source line number
+    const srcLine = lineMap[eip];
+    if (srcLine === undefined) return;
+
+    editor.addLineClass(srcLine, "background", "current-line");
+    highlightedLine = srcLine;
+    editor.scrollIntoView({ line: srcLine, ch: 0 }, 100); // scroll editor to keep the line visible
+}
+
+// adds a line to the output log, pass true for isError to show it in red
 function log(message, isError = false) {
     const entry = document.createElement("div");
     entry.textContent = message;
     if (isError) entry.classList.add("error");
+
     const logOutput = document.getElementById("log-output");
     logOutput.appendChild(entry);
-    logOutput.scrollTop = logOutput.scrollHeight; // scroll to bottom so latest output is visible
+    logOutput.scrollTop = logOutput.scrollHeight; // scroll to the bottom so new output is visible
 }
 
-// register groups shown in the popup, each group is a family or category
+// register popup groups, each entry is a family of related registers
 const POPUP_GROUPS = [
     { label: "A",   regs: ["EAX", "AX", "AH", "AL"] },
     { label: "B",   regs: ["EBX", "BX", "BH", "BL"] },
@@ -177,14 +179,26 @@ const POPUP_GROUPS = [
     { label: "Ptr", regs: ["ESP", "EBP", "ESI", "EDI", "EIP"] },
 ];
 
-// builds the register popup content from scratch each time its called
-// runs on every step if the popup is open so values stay current
+// creates a single register span pair (name + value)
+function makeRegSpan(name) {
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "reg-name";
+    nameSpan.textContent = name + ":";
+
+    const valSpan = document.createElement("span");
+    valSpan.className = "reg-val";
+    valSpan.textContent = cpu.regs[name];
+
+    return [nameSpan, valSpan];
+}
+
+// rebuilds the popup content with current register values
 function renderRegisterPopup() {
     const container = document.getElementById("reg-popup-body");
     if (!container) return;
     container.innerHTML = "";
 
-    POPUP_GROUPS.forEach(group => {
+    for (const group of POPUP_GROUPS) {
         const section = document.createElement("div");
         section.className = "reg-popup-group";
 
@@ -193,19 +207,15 @@ function renderRegisterPopup() {
             const row = document.createElement("div");
             row.className = "reg-popup-row";
 
-            const a = group.regs[i];
-            const b = group.regs[i + 1];
-
-            // if theres no second register (odd count), just render one
-            row.innerHTML = b
-                ? `<span class="reg-name">${a}:</span><span class="reg-val">${cpu.regs[a]}</span><span class="reg-name">${b}:</span><span class="reg-val">${cpu.regs[b]}</span>`
-                : `<span class="reg-name">${a}:</span><span class="reg-val">${cpu.regs[a]}</span>`;
+            for (const span of makeRegSpan(group.regs[i])) row.appendChild(span);
+            if (group.regs[i + 1]) {
+                for (const span of makeRegSpan(group.regs[i + 1])) row.appendChild(span);
+            }
 
             section.appendChild(row);
         }
-
         container.appendChild(section);
-    });
+    }
 }
 
 function openRegisterPopup() {
@@ -217,34 +227,37 @@ function closeRegisterPopup() {
     document.getElementById("reg-popup").style.display = "none";
 }
 
-// makes an element draggable by holding its title bar
+// makes an element draggable by clicking and dragging its handle
 function makeDraggable(popup, handle) {
     let dragging = false;
     let offsetX = 0;
     let offsetY = 0;
 
-    handle.addEventListener("mousedown", (e) => {
+    handle.addEventListener("mousedown", (event) => {
         dragging = true;
-        // offset keeps the popup from jumping to the cursor position on click
-        offsetX = e.clientX - popup.getBoundingClientRect().left;
-        offsetY = e.clientY - popup.getBoundingClientRect().top;
+        // record where inside the popup the click happened
+        // so it doesnt jump when you first click
+        offsetX = event.clientX - popup.getBoundingClientRect().left;
+        offsetY = event.clientY - popup.getBoundingClientRect().top;
     });
 
-    document.addEventListener("mousemove", (e) => {
+    document.addEventListener("mousemove", (event) => {
         if (!dragging) return;
-        popup.style.left = (e.clientX - offsetX) + "px";
-        popup.style.top  = (e.clientY - offsetY) + "px";
+        popup.style.left = (event.clientX - offsetX) + "px";
+        popup.style.top  = (event.clientY - offsetY) + "px";
     });
 
-    document.addEventListener("mouseup", () => dragging = false);
+    document.addEventListener("mouseup", () => { 
+        dragging = false; 
+    });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("btn-show-regs")?.addEventListener("click", openRegisterPopup);
-    document.getElementById("btn-close-reg-popup")?.addEventListener("click", closeRegisterPopup);
+// make the buttons open and close the popup
+document.getElementById("btn-show-regs").addEventListener("click", openRegisterPopup);
+document.getElementById("btn-close-reg-popup").addEventListener("click", closeRegisterPopup);
 
-    makeDraggable(
-        document.querySelector(".reg-popup-inner"),
-        document.querySelector(".reg-popup-titlebar")
-    );
-});
+// make the popup window draggable
+makeDraggable(
+    document.querySelector(".reg-popup-inner"),
+    document.querySelector(".reg-popup-titlebar")
+);

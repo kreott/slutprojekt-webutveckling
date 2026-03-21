@@ -1,74 +1,75 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>Assembly Playground</title>
-        <link rel="icon" type="image/x-icon" href="icon.jpg">
-        <link rel="stylesheet" href="css/index.css">
-        <script src="js/asm.js" defer></script>
-        <script src="js/ui.js" defer></script>
+<html lang="en">
+<head>
+    <title>Assembly Playground</title>
+    <link rel="icon" type="image/x-icon" href="icon.png">
+    <link rel="stylesheet" href="css/index.css">
+    <script src="js/asm.js" defer></script>
+    <script src="js/ui.js" defer></script>
 
-        <!-- import codemirror (easy web ide style textarea) -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-        <script src="js/codemirror/asm-mode.js"></script>
+    <!-- import codemirror (easy web ide style textarea) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="js/codemirror/asm-mode.js"></script>
 
-        <!-- import google font -->
-        <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
-    </head>
+    <!-- import google font -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+</head>
 
-    <body>
-        <div class="app">
-            <div class="editor-panel">
-                <h1>ASSEMBLY PLAYGROUND</h1>
-                <div class="toolbar">
-                    <label>INTERVAL MODE:</label>
-                    <span id="speed-display"></span>
+<body>
+    <div class="app">
+        <div class="editor-panel">
+            <h1>ASSEMBLY PLAYGROUND</h1>
+            <div class="toolbar">
+                <div class="speed-control">
+                    <label>INTERVAL MODE: <span id="speed-display"></span></label>
                     <input type="range" id="speed-slider" min="0" max="3000" value="0" step="200">
-                    <button id="btn-run">RUN</button>
-                    <button id="btn-step">STEP</button>
-                    <button id="btn-reset">STOP</button>
-                    <button id="btn-help"><a href="help.html">HELP</a></button>
                 </div>
-                <textarea id="code-input"></textarea>
+                <button id="btn-run">RUN</button>
+                <button id="btn-step">STEP</button>
+                <button id="btn-reset">STOP</button>
+                <button id="btn-help"><a href="help.html">HELP</a></button>
             </div>
-            <div class="state-panel">
-                <div class="registers-panel">
-                    <div class="registers-header">
-                        <h2>REGISTERS</h2>
-                        <button id="btn-show-regs" class="btn-all-regs">Show all</button>
-                    </div>
-                    <div class="registers-grid">
-                        <div class="register" id="reg-EAX">EAX: <span class="reg-value">0</span></div>
-                        <div class="register" id="reg-EIP">EIP: <span class="reg-value">0</span></div>
-                        <div class="register" id="reg-EBX">EBX: <span class="reg-value">0</span></div>
-                        <div class="register" id="reg-ESP">ESP: <span class="reg-value">1048576</span></div>
-                        <div class="register" id="reg-ECX">ECX: <span class="reg-value">0</span></div>
-                        <div class="register" id="reg-EBP">EBP: <span class="reg-value">0</span></div>
-                        <div class="register" id="reg-EDX">EDX: <span class="reg-value">0</span></div>
-                        <div class="register" id="reg-ESI">ESI: <span class="reg-value">0</span></div>
-                    </div>
-                    <h2>FLAGS</h2>
-                    <div class="flags-grid">
-                        <div class="flag" id="flag-ZERO">ZERO: <span class="flag-value">false</span></div>
-                        <div class="flag" id="flag-CARRY">CARRY: <span class="flag-value">false</span></div>
-                        <div class="flag" id="flag-SIGN">SIGN: <span class="flag-value">false</span></div>
-                        <div class="flag" id="flag-OVERFLOW">OVERFLOW: <span class="flag-value">false</span></div>
-                    </div>
+            <textarea id="code-input"></textarea>
+        </div>
+        <div class="state-panel">
+            <div class="registers-panel">
+                <div class="registers-header">
+                    <h2>REGISTERS</h2>
+                    <button id="btn-show-regs" class="btn-all-regs">Show all</button>
                 </div>
-                <div class="log-panel">
-                    <h2>OUTPUT</h2>
-                    <div id="log-output"></div>
+                <div class="registers-grid">
+                    <div class="register" id="reg-EAX">EAX: <span class="reg-value">0</span></div>
+                    <div class="register" id="reg-EIP">EIP: <span class="reg-value">0</span></div>
+                    <div class="register" id="reg-EBX">EBX: <span class="reg-value">0</span></div>
+                    <div class="register" id="reg-ESP">ESP: <span class="reg-value">1048576</span></div>
+                    <div class="register" id="reg-ECX">ECX: <span class="reg-value">0</span></div>
+                    <div class="register" id="reg-EBP">EBP: <span class="reg-value">0</span></div>
+                    <div class="register" id="reg-EDX">EDX: <span class="reg-value">0</span></div>
+                    <div class="register" id="reg-ESI">ESI: <span class="reg-value">0</span></div>
                 </div>
+                <h2>FLAGS</h2>
+                <div class="flags-grid">
+                    <div class="flag" id="flag-ZERO">ZERO: <span class="flag-value">false</span></div>
+                    <div class="flag" id="flag-CARRY">CARRY: <span class="flag-value">false</span></div>
+                    <div class="flag" id="flag-SIGN">SIGN: <span class="flag-value">false</span></div>
+                    <div class="flag" id="flag-OVERFLOW">OVERFLOW: <span class="flag-value">false</span></div>
+                </div>
+            </div>
+            <div class="log-panel">
+                <h2>OUTPUT</h2>
+                <div id="log-output"></div>
             </div>
         </div>
-        <div id="reg-popup">
-            <div class="reg-popup-inner">
-                <div class="reg-popup-titlebar">
-                    <span>ALL REGISTERS</span>
-                    <button id="btn-close-reg-popup">✕</button>
-                </div>
-                <div id="reg-popup-body"></div>
+    </div>
+    <div id="reg-popup">
+        <div class="reg-popup-inner">
+            <div class="reg-popup-titlebar">
+                <span>ALL REGISTERS</span>
+                <button id="btn-close-reg-popup">✕</button>
             </div>
+            <div id="reg-popup-body"></div>
         </div>
-    </body>
+    </div>
+</body>
 </html>

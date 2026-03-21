@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Assembly Playground - Help</title>
-    <link rel="icon" type="image/x-icon" href="icon.jpg">
+    <link rel="icon" type="image/x-icon" href="icon.png">
     <link rel="stylesheet" href="css/help.css">
 
     <!-- import google font -->
@@ -17,6 +17,7 @@
         <a href="#registers">Registers</a>
         <a href="#flags">Flags</a>
         <a href="#memory">Memory</a>
+        <a href="#sections">Sections</a>
         <span class="group">Instructions</span>
         <a href="#data">Data movement</a>
         <a href="#arithmetic">Arithmetic</a>
@@ -28,14 +29,14 @@
 
     <div class="content">
         <h1>Assembly Playground - Help</h1>
-        <p>Reference page for the simulator. covers instructions, registers, flags, memory etc.</p>
+        <p>Reference page for the simulator. Covers everything implemented in this small version of x86 assembly.</p>
 
         <!-- registers -->
         <div class="section" id="registers">
             <h2>Registers</h2>
             <p>Registers are small storage slots inside the CPU, almost like pre-made variables! There are 4 general purpose ones (A, B, C, D) and each one has 4 names that all point to different parts of the same 32-bit value.</p>
 
-            <p><span class="keyword">EAX</span> is the full 32-bit register. AX is the lower 16 bits of it, and AH/AL are the two halves of AX. They all point to the same value, so changing one affects the others.</p>
+            <p><span class="op">EAX</span> is the full 32-bit register. AX is the lower 16 bits of it, and AH/AL are the two halves of AX. They all point to the same value, so changing one affects the others.</p>
             <p><span class="op">EBX</span>, <span class="op">ECX</span> and <span class="op">EDX</span> work exactly the same way with their own sub-registers (BX/BH/BL, etc).</p>
 
             <h3>Special registers</h3>
@@ -116,6 +117,20 @@
             <p class="note">*note: reads and writes are (almost) always 32-bit (4 bytes at once). writing to address 0x100 also changes 0x101, 0x102 and 0x103.</p>
         </div>
 
+        <!-- sections -->
+        <div class="section" id="sections">
+            <h2>Sections</h2>
+            <p>Sections split your program into named regions. They are <span class="keyword">.text</span> for instructions and <span class="keyword">.data</span> for pre-defined values.</p>
+
+            <div class="code">
+                <span class="keyword">section</span> <span class="label">.data</span><br>
+                <span class="reg">myvar</span> <span class="keyword">dd</span> <span class="num">42</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">; declare a 32-bit value</span><br>
+                <br>
+                <span class="keyword">section</span> <span class="label">.text</span><br>
+                <span class="keyword">MOV</span> <span class="reg">EAX</span>, [<span class="reg">myvar</span>]&nbsp;&nbsp;<span class="comment">; read it into EAX</span>
+            </div>
+        </div>
+
         <!-- data movement -->
         <div class="section" id="data">
             <h2>Data movement</h2>
@@ -158,7 +173,7 @@
             </div>
             <div class="row">
                 <div class="op">DIV</div>
-                <div>divides dest by src. dont divide by zero, it'll break please dont 🙏🙏🙏</div>
+                <div>divides dest by src. dont divide by zero.</div>
                 <div><span class="keyword">DIV</span> <span class="reg">EAX</span>, <span class="num">2</span></div>
             </div>
             <div class="row">
@@ -304,7 +319,7 @@
 
             <h3>Comments</h3>
             <div class="code">
-                <span class="keyword">MOV</span> <span class="reg">EAX</span>, <span class="num">1</span>  <span class="comment">; semicolons start a comment, everything after is ignored</span>
+                <span class="keyword">MOV</span> <span class="reg">EAX</span>, <span class="num">1</span>  <span class="comment">; semicolons start a comment</span>
             </div>
 
             <h3>Labels</h3>
@@ -327,7 +342,7 @@
                 <span class="keyword">MOV</span> <span class="reg">EBX</span>, [<span class="reg">EAX</span>]    <span class="comment">; treat EAX as a memory address and read from it</span>
             </div>
 
-            <p class="note">*note: everything is case-insensitive so MOV and mov both work fine.</p>
+            <p class="note">*note: everything is case-insensitive so MOV, mov and mOv all work fine.</p>
         </div>
     </div>
 </div>

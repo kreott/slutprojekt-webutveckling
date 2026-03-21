@@ -3,13 +3,13 @@
     --panel: #0f0f1a;
     --border: #1e1e3a;
     --accent: #00ff9f;
-    --darkaccent: #008250;
+    --accent-dark: #00bf76;
     --error: #ff2d55;
     --text: #e8e8f0;
     --purple: #bf00ff;
     --yellow: #ffee00;
     --muted:#555570;
-    --orange: #ff8c00;
+    --orange: #ff9f00;
 }
 
 * {
@@ -76,6 +76,7 @@ body {
 .registers-panel {
     display: flex;
     flex-direction: column;
+    
 }
 
 .registers-grid {
@@ -118,7 +119,8 @@ button {
 }
 
 button:hover {
-    color: var(--accent)
+    color: var(--accent-dark);
+    border: 1px solid var(--accent-dark);
 }
 
 button a {
@@ -216,9 +218,14 @@ button a {
     color: var(--accent);
 }
 
+.current-line {
+    background: rgba(0, 255, 159, 0.1) !important;
+    border-left: 2px solid var(--accent) !important;
+}
+
 /* codemirror syntax highlighting */
 .cm-s-custom .cm-keyword  { color: var(--error); }
 .cm-s-custom .cm-variable { color: var(--accent); }
 .cm-s-custom .cm-number   { color: var(--orange); }
 .cm-s-custom .cm-comment  { color: var(--muted); font-style: italic; }
-.cm-s-custom .cm-hex      { color: var(--orange); }
+.cm-s-custom .cm-hex      { color: var(--purple); }

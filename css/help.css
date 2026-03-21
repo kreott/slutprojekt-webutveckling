@@ -104,7 +104,6 @@ body {
     margin-bottom: 0.5rem;
 }
 
-/* instruction rows */
 .row-header {
     display: grid;
     grid-template-columns: 70px 1fr 1fr;
@@ -121,6 +120,10 @@ body {
     border-bottom: 1px solid var(--border);
     font-size: 0.85rem;
     line-height: 1.6;
+}
+
+.row:hover {
+    background-color: var(--panel);
 }
 
 .code {

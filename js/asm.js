@@ -96,6 +96,18 @@ const cpu = {
 
 const memory = new Uint8Array(1024 * 1024); // 1 megabyte
 
+// stores the memory address of each .data variable by name
+const dataMap = {};
+
+// simple bump allocator for .data variables, starts after a safe offset
+let heapPtr = 0x2000;
+
+function allocate(size) {
+    const addr = heapPtr;
+    heapPtr += size;
+    return addr;
+}
+
 function read8(addr) {
     return (memory[addr]);
 }
@@ -128,31 +140,100 @@ function write32(addr, val) {
     memory[addr + 3] = val & 0xFF;
 }
 
+// strips out %define lines and replaces any names they 
+// defined everywhere else in the code
+function preprocess(code) {
+    const defined = {};
+
+    const lines = code.split("\n").map(line => {
+        const trimmed = line.trim().toUpperCase();
+        if (!trimmed.startsWith("%DEFINE")) return line;
+
+        // grab the name and value from "%define NAME VALUE"
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 3) {
+            defined[parts[1].toUpperCase()] = parts[2];
+        }
+        return ""; // blank the line instead of removing it
+    });
+
+    // swap out any defined names in the remaining lines
+    return lines.map(line => {
+        for (const [name, value] of Object.entries(defined)) {
+            line = line.replace(new RegExp(`\\b${name}\\b`, "gi"), value);
+        }
+        return line;
+    }).join("\n");
+}
 // parse assembly lines
 let lines = [];
 let labels = {};
 function parseLine(line) {
+    // pull out any quoted string before uppercasing
+    let stringLiteral = null;
+    line = line.replace(/"([^"]*)"/, (match, inner) => {
+        stringLiteral = inner; // save the original casing
+        return `"__STR__"`;    // replace with a placeholder
+    });
+
     line = line.trim().toUpperCase();
     line = line.split(";")[0].trim(); // remove ; comments
 
     if (line === "") return null; // if line is empty return null
 
+
     const parts = line.split(" "); // parts of the line, operation, destination etc
     const op = parts[0]; // operation
     const args = parts.slice(1).join(" ").split(", ").map(a => a.trim()); // splits the arguments of the line into an array
+
+    // put the real string back in place of the placeholder
+    if (stringLiteral !== null) {
+        const idx = args.findIndex(a => a === `"__STR__"`);
+        if (idx !== -1) args[idx] = `"${stringLiteral}"`;
+    }
+
     return { raw: line, op: op, args: args };
 }
 
 // parse labels
+let lineMap = [];
 function loadProgram(code) {
-    // parse all lines, strip blanks and comments
-    const parsed = code.split("\n").map(parseLine).filter(line => line !== null);
+    code = preprocess(code);
 
     lines = [];
     labels = {};
-    let offset = 0;
+    lineMap = [];
 
-    // find all labels and map them to their line index
+    let currentSection = "text";
+    const textLines = [];
+    const dataLines = [];
+
+    const rawLines = code.split("\n");
+    const parsed = [];
+
+    rawLines.forEach((raw, srcLine) => {
+        if (raw.trim().toLowerCase() === "section .data") {
+            currentSection = "data";
+        } else if (raw.trim().toLowerCase() === "section .text") {
+            currentSection = "text";
+        } else {
+            // push to the right section array
+            if (currentSection === "data") {
+                dataLines.push({ raw, srcLine });
+            } else {
+                textLines.push({ raw, srcLine });
+            }
+        }
+    });
+
+    // parse each line but keep track of its original line number
+    rawLines.forEach((raw, srcLine) => {
+        const line = parseLine(raw);
+        if (line) parsed.push({ ...line, srcLine });
+    });
+
+    // find labels
+    let offset = 0;
     parsed.forEach((line, index) => {
         if (line.raw.endsWith(":")) {
             labels[line.raw.slice(0, -1)] = index - offset;
@@ -160,32 +241,62 @@ function loadProgram(code) {
         }
     });
 
-    // remove label lines from the code
-    lines = parsed.filter(line => !line.raw.endsWith(":"));
+    // find labels and build lines and lineMap in one pass over parsed
+    let instrIndex = 0;
+    parsed.forEach(line => {
+        if (line.raw.endsWith(":")) {
+            // store where this label points in the instruction list
+            labels[line.raw.slice(0, -1)] = instrIndex;
+        } else if (line.op !== "SECTION") {
+            lineMap.push(line.srcLine);
+            lines.push(line);
+            instrIndex++;
+        }
+    });
+
+    // reset data memory so old variables dont hang around between runs
+    heapPtr = 0x2000;
+    Object.keys(dataMap).forEach(k => delete dataMap[k]);
+
+    // process .data section lines — each one is "name dd value"
+    dataLines.forEach(({ raw }) => {
+        const parts = raw.trim().split(/\s+/);
+        if (parts.length < 3) return;
+
+        const name  = parts[0].toUpperCase();
+        const type  = parts[1].toUpperCase();
+        const value = Number(parts[2]);
+
+        if (type === "DD") {
+            const addr = allocate(4);
+            write32(addr, value);
+            dataMap[name] = addr;
+        }
+    });
 }
 
-// checks for typos and invalid arguments
+// checks for errors in arguments
 function isValidArg(str) {
-    if (cpu.regs[str] !== undefined) 
-        return true;
-    else if (!isNaN(resolveVal(str))) 
-        return true;
-
-    return false;
+    return cpu.regs[str] !== undefined || !isNaN(resolveVal(str));
 }
 
 // checks for errors and typos
 function validate(code) {
+    code = preprocess(code);
+
     const jumpOps = ["JMP", "JE", "JNE", "JG", "JGE", "JL", "JLE", "CALL"];
     const parsed = code.split("\n").map(parseLine).filter(line => line !== null);
+    const stringOps = ["PRINT"];
     const errors = [];
 
     parsed.forEach((line, index) => {
         if (line.raw.endsWith(":")) return; // skip labels
+        if (line.op === "SECTION") return;  // skip section headers
+        if (stringOps.includes(line.op)) return; // strings would fail isValidArg
 
         // check instructions
         if (!instructions[line.op]) {
-            errors.push(`line ${index + 1}: unknown instruction "${line.op}"`);
+            errors.push(`line ${index + 1}: unknown instruction '${line.op}'`);
         }
 
         // skip checking arguments if instruction is a jump
@@ -194,7 +305,7 @@ function validate(code) {
         // check arguments
         line.args.forEach(arg => {
             if (!isValidArg(arg)) {
-                errors.push(`line ${index + 1}: invalid argument "${arg}"`);
+                errors.push(`line ${index + 1}: invalid argument '${arg}'`);
             }
         });
     });
@@ -205,18 +316,13 @@ function validate(code) {
 
 // helpers //
 
-// gets the value of a register or a plain number
-// "EAX" -> cpu.regs.EAX, "42" -> 42
+// gets the value of a register, data variable, or plain number
+// "EAX" -> cpu.regs.EAX, "MYVAR" -> read32(dataMap.MYVAR), "42" -> 42
 function resolveVal(val) {
-    if (cpu.regs[val] !== undefined) { // check registers first
-        return cpu.regs[val];
-    }
-    if (isMemRef(val)) { // if memory reference
-        return read32(resolveVal(derefMem(val)));
-    }
-    if (val.startsWith("0X")) { // if hex value
-        return parseInt(val, 16);
-    }
+    if (cpu.regs[val] !== undefined) return cpu.regs[val];
+    if (isMemRef(val)) return read32(resolveVal(val.slice(1, -1)));
+    if (dataMap[val] !== undefined) return read32(dataMap[val]); // look up data variables
+    if (val.startsWith("0X")) return parseInt(val, 16);
     return Number(val);
 }
 
@@ -225,17 +331,12 @@ function isMemRef(arg) {
     return arg.startsWith("[") && arg.endsWith("]");
 }
 
-// strips the brackets off a memory reference, [EAX] -> EAX
-function derefMem(arg) {
-    return arg.slice(1, -1);
-}
-
 // handles writing to both registers and memory addresses
 // if dst is something like [EAX] it writes to that address in memory
 // otherwise just writes to the register directly
 function writeDst(dst, val) {
     if (isMemRef(dst)) {
-        write32(resolveVal(derefMem(dst)), val);
+        write32(resolveVal(dst.slice(1, -1)), val);
     } else {
         cpu.regs[dst] = val;
     }
@@ -294,7 +395,7 @@ const instructions = {
         const result = a / b;
 
         updateFlags(result);
-        writeDst(args[0], result)
+        writeDst(args[0], result);
     },
 
     // bitwise AND &
@@ -428,30 +529,43 @@ const instructions = {
     CALL(args) {
         cpu.regs.ESP -= 4;
         write32(cpu.regs.ESP, cpu.regs.EIP + 1);
-        cpu.regs.EIP = labels[args[0]]
+        cpu.regs.EIP = labels[args[0]];
     },
 
     // return from function
     RET() {
         cpu.regs.EIP = read32(cpu.regs.ESP);
         cpu.regs.ESP += 4;
-    }
+    },
+
+    // print string or value
+    PRINT(args) {
+        const val = args[0];
+        if (val.startsWith('"') && val.endsWith('"')) {
+            log(val.slice(1, -1)); // strip quotes and print
+        } else {
+            log(resolveVal(val));
+        }
+    },
 };
 
 // execute instruction
 function execute(inst) {
+    // highlight current line
+    highlightLine(cpu.regs.EIP);
+
     const fn = instructions[inst.op];
 
     if (fn) {
         fn(inst.args);
     } else {
-        // unknown instruction. Todo: add errors
+        // unknown instruction. error handling happens before the code runs,
+        // so this is probably not necessary
     }
 }
 
 // execute one line
 function step() {
-    // bounds check, checks if we're at the end of the code
     if (cpu.regs.EIP >= lines.length) {
         return;
     }
@@ -459,18 +573,12 @@ function step() {
     const inst = lines[cpu.regs.EIP];
     const prevEIP = cpu.regs.EIP;
 
-    // log to output
-    log(inst.raw);
-
-    // execute current instruction
     execute(inst);
-    
-    // only increment EIP if a jump hasnt occurred
+
     if (cpu.regs.EIP === prevEIP) {
         cpu.regs.EIP++;
     }
 
-    // update UI
     updateUIRegisters();
     updateUIFlags();
 }
